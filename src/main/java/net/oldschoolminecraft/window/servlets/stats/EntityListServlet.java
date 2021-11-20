@@ -1,17 +1,20 @@
 package net.oldschoolminecraft.window.servlets.stats;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.google.gson.Gson;
 import net.oldschoolminecraft.window.servlets.WindowServlet;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.*;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 
 public class EntityListServlet extends WindowServlet
 {
+    private static Gson gson = new Gson();
+
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
@@ -30,7 +33,7 @@ public class EntityListServlet extends WindowServlet
                     y = entity.getLocation().getY();
                     z = entity.getLocation().getZ();
                 }});
-        response.getWriter().print(gson.toJson(new StandardResponse(true, "--")));
+        response.getWriter().print(gson.toJson(new WindowServlet.StandardResponse(true, "--")));
     }
 
     private EntityType determineEntityType(Entity entity)

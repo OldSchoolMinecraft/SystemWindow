@@ -4,16 +4,24 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import net.oldschoolminecraft.window.servlets.accounts.DeleteAccountServlet;
+import net.oldschoolminecraft.window.servlets.bans.IssueBanServlet;
+import net.oldschoolminecraft.window.servlets.bans.RevokeBanServlet;
+import net.oldschoolminecraft.window.servlets.debug.PlayerListServlet;
+import net.oldschoolminecraft.window.servlets.errors.InternalServerError;
+import net.oldschoolminecraft.window.servlets.errors.NoRoute;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.servlet.ErrorPageErrorHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URL;
 import java.security.SecureRandom;
 
 public class Window extends JavaPlugin
@@ -35,11 +43,34 @@ public class Window extends JavaPlugin
             loadConfig();
 
             server = new Server(config.port);
-            WebAppContext webAppContext = new WebAppContext();
-            server.setHandler(webAppContext);
+            ServerConnector connector = new ServerConnector(server);
+            server.setConnectors(new Connector[]{connector});
+            ServletContextHandler handler = new ServletContextHandler();
+            handler.setContextPath("/*");
 
-            URL webAppDir = getClass().getResource("META-INF/resources");
-            webAppContext.setResourceBase(webAppDir.toURI().toString());
+
+
+            // debug
+            handler.addServlet(PlayerListServlet.class, "/debug/playerList");
+
+            // bans
+            handler.addServlet(IssueBanServlet.class, "/bans/issue");
+            handler.addServlet(RevokeBanServlet.class, "/bans/revoke");
+
+            // accounts
+            handler.addServlet(DeleteAccountServlet.class, "/accounts/delete");
+
+            // fail routing
+            handler.addServlet(NoRoute.class, "/");
+            handler.addServlet(NoRoute.class, "/noRoute");
+            handler.addServlet(InternalServerError.class, "/internalServerError");
+
+            // error handling
+            ErrorPageErrorHandler errorPageErrorHandler = new ErrorPageErrorHandler();
+            errorPageErrorHandler.addErrorPage(404, "/noRoute");
+            errorPageErrorHandler.addErrorPage(500, "/internalServerError");
+
+            server.setHandler(handler);
 
             server.start();
         } catch (Exception e) {
@@ -64,6 +95,7 @@ public class Window extends JavaPlugin
             new SecureRandom().nextBytes(rand);
             config.api_key = new String(DigestUtils.sha1(rand)).toLowerCase();
             config.port = 2021;
+
             gson.toJson(config, config.getClass(), new JsonWriter(new FileWriter(configFile)));
             System.out.println("SystemWindow generated new config");
         }
